@@ -5,7 +5,7 @@ function WelcomeScreen({ onStart, lang, setLang }) {
   useEffect(() => {
     const handleInteraction = () => {
       const audio = new Audio('/epic_ThurianX_app.mp3');
-      audio.volume = 0.5;
+      audio.volume = 0.2;
       audio.play().catch((err) => {
         console.warn('🎵 Cannot play audio:', err);
       });

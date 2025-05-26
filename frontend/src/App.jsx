@@ -1,32 +1,36 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-
-
-
 function WelcomeScreen({ onStart, lang, setLang }) {
   useEffect(() => {
-    const playAudioOnce = () => {
-      const audio = new Audio('/Sia.mp3.mp3');
+    const handleInteraction = () => {
+      const audio = new Audio('/epic_ThurianX_app.mp3');
       audio.volume = 0.5;
-      audio.play().catch(() => {});
-      document.removeEventListener('touchstart', playAudioOnce);
-    };
-    document.addEventListener('touchstart', playAudioOnce);
-  }, []);
-  const handleStart = () => {
-    const audio = new Audio('/Sia_-_Unstoppable_CeeNaija.com_.mp3');
-    audio.volume = 1.0;
-    audio.play()
-      .then(() => {
-        console.log('🎵 Audio started successfully');
-      })
-      .catch((error) => {
-        console.warn('⚠️ Audio play failed:', error);
+      audio.play().catch((err) => {
+        console.warn('🎵 Cannot play audio:', err);
       });
+      window.__thurianxAudio = audio;
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      if (window.__thurianxAudio) {
+        window.__thurianxAudio.pause();
+        window.__thurianxAudio.currentTime = 0;
+      }
+    };
+  }, []);
+
+  const handleStart = () => {
     onStart();
   };
-  
+
   const headings = {
     TH: 'ระบบตรวจสอบระดับการสุกของทุเรียน ด้วย AI ที่เรียบง่าย งดงาม และแม่นยำ',
     EN: 'Detect Durian Ripeness with AI – Minimal, Elegant, and Precise.',
@@ -53,6 +57,18 @@ function WelcomeScreen({ onStart, lang, setLang }) {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 text-center space-y-6 relative overflow-hidden">
+      {/* ข้อความเบาๆ ลอยๆ ชวนเปิดเสียง */}
+      <motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  className="absolute top-4 right-4 text-sm text-gray-400 animate-pulse z-20"
+>
+  {lang === 'TH' && 'สัมผัสเพื่อเปิดดนตรี 🎵'}
+  {lang === 'EN' && 'Touch the screen to enable sound 🎵'}
+  {lang === 'CN' && '点击屏幕以开启音乐 🎵'}
+</motion.div>
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -66,28 +82,27 @@ function WelcomeScreen({ onStart, lang, setLang }) {
           {subtitle[lang]}
         </p>
         {['TH', 'EN', 'CN'].includes(lang) && (
-  <>
-    <p className="text-base text-gray-500 italic mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {lang === 'TH'
-        ? 'สร้างโดยทีมงาน Super AI Innovator - ภาคกลาง ศูนย์ลาดกระบัง'
-        : lang === 'EN'
-        ? 'Built by Super AI Innovator Team – Central Region, IT KMITL'
-        : '由 Super AI Innovator 团队 – 中部，KMITL IT 制作 '}
-    </p>
-    <p className="text-base text-gray-500 italic -mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {lang === 'TH'
-        ? 'ได้รับการสนับสนุนโดยบริษัท การบินกรุงเทพ จำกัด (มหาชน)'
-        : lang === 'EN'
-        ? 'Supported by Bangkok Airways'
-        : '由 Bangkok Airways Public Company Limited 提供支持'}
-    </p>
-  </>
-)}
+          <>
+            <p className="text-base text-gray-500 italic mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {lang === 'TH'
+                ? 'สร้างโดยทีมงาน Super AI Innovator - ภาคกลาง ศูนย์ลาดกระบัง'
+                : lang === 'EN'
+                ? 'Built by Super AI Innovator Team – Central Region, IT KMITL'
+                : '由 Super AI Innovator 团队 – 中部，KMITL IT 制作 '}
+            </p>
+            <p className="text-base text-gray-500 italic -mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {lang === 'TH'
+                ? 'ได้รับการสนับสนุนโดยบริษัท การบินกรุงเทพ จำกัด (มหาชน)'
+                : lang === 'EN'
+                ? 'Supported by Bangkok Airways'
+                : '由 Bangkok Airways Public Company Limited 提供支持'}
+            </p>
+          </>
+        )}
         <p className="text-md text-gray-300 max-w-xl mt-6 leading-relaxed">
           {headings[lang]}
         </p>
       </motion.div>
-
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -130,25 +145,16 @@ function WelcomeScreen({ onStart, lang, setLang }) {
   );
 }
 
-
-
-
-
-
-
-
-
-
 function getResultStyle(index) {
   switch (index) {
     case 0:
-      return 'bg-orange-100 text-orange-700'; // ดิบ
+      return 'bg-orange-100 text-orange-700';
     case 1:
-      return 'bg-green-600 text-white'; // พร้อมตัด
+      return 'bg-green-600 text-white';
     case 2:
-      return 'bg-yellow-300 text-yellow-900'; // สุก
+      return 'bg-yellow-300 text-yellow-900';
     case 3:
-      return 'bg-red-200 text-red-700'; // ไม่สามารถระบุได้
+      return 'bg-red-200 text-red-700';
     default:
       return 'bg-gray-200 text-gray-700';
   }
@@ -157,19 +163,17 @@ function getResultStyle(index) {
 function getResultIcon(index) {
   switch (index) {
     case 0:
-      return '⏳'; // ดิบ
+      return '⏳';
     case 1:
-      return '✅'; // พร้อมตัด
+      return '✅';
     case 2:
-      return '🍽️'; // สุก
+      return '🍽️';
     case 3:
-      return '❌'; // ไม่สามารถระบุได้
+      return '❌';
     default:
       return 'ℹ️';
   }
 }
-
-// ... WelcomeScreen remains unchanged
 
 function App() {
   const [image, setImage] = useState(null);
@@ -189,9 +193,9 @@ function App() {
   };
 
   const buttons = {
-    TH: ['📷 ถ่ายภาพ', '📁 คลังภาพ/เลือกไฟล์', '🔍 วิเคราะห์'],
-    EN: ['📷 Take Photo', '📁 Gallery/File', '🔍 Analyze'],
-    CN: ['📷 拍照', '📁 图库/选择文件', '🔍 分析']
+    TH: ['📷 ถ่ายภาพ', '🔍 วิเคราะห์'],
+    EN: ['📷 Take Photo', '🔍 Analyze'],
+    CN: ['📷 拍照', '🔍 分析']
   };
 
   const handleUpload = (e) => {
@@ -253,17 +257,14 @@ function App() {
           )}
 
           <input type="file" accept="image/*" capture="environment" onChange={handleUpload} ref={cameraInputRef} className="hidden" />
-          <input type="file" accept="image/*" onChange={handleUpload} ref={fileInputRef} className="hidden" />
 
           <div className="flex gap-4 flex-wrap justify-center">
             <button onClick={() => cameraInputRef.current && cameraInputRef.current.click()} className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow">
               {buttons[lang][0]}
             </button>
-            <button onClick={() => fileInputRef.current && fileInputRef.current.click()} className="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow">
+
+            <button onClick={analyzeImage} disabled={!preview || loading} className="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow disabled:opacity-40">
               {buttons[lang][1]}
-            </button>
-            <button onClick={analyzeImage} disabled={!preview || loading} className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow disabled:opacity-40">
-              {buttons[lang][2]}
             </button>
           </div>
 

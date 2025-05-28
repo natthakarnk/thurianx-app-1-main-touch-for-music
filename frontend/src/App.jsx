@@ -150,8 +150,8 @@ function getResultStyle(index) {
       return 'bg-green-600 text-white';
     case 2:
       return 'bg-yellow-300 text-yellow-900';
-    case 3:
-      return 'bg-red-200 text-red-700';
+    // case 3:
+//   return 'bg-red-200 text-red-700';
     default:
       return 'bg-gray-200 text-gray-700';
   }
@@ -165,8 +165,8 @@ function getResultIcon(index) {
       return '✅';
     case 2:
       return '🍽️';
-    case 3:
-      return '❌';
+    // case 3:
+//   return '❌';
     default:
       return 'ℹ️';
   }
@@ -184,10 +184,10 @@ function App() {
   const cameraInputRef = useRef(null);
 
   const labels = {
-    TH: ['ดิบ', 'พร้อมทำการตัด', 'สุก', 'ไม่สามารถระบุได้ กรุณาดำเนินการใหม่ !!!'],
-    EN: ['Raw', 'Ready to Harvest', 'Ripe', 'Unable to identify. Please try again.'],
-    CN: ['未熟', '可采摘', '成熟', '无法识别，请重试！']
-  };
+  TH: ['ดิบ', 'พร้อมทำการตัด', 'สุก'],
+  EN: ['Raw', 'Ready to Harvest', 'Ripe'],
+  CN: ['未熟', '可采摘', '成熟']
+};
 
   const buttons = {
     TH: ['📷 ถ่ายภาพ', '🔍 วิเคราะห์'],
@@ -207,34 +207,46 @@ function App() {
   };
 
   const analyzeImage = async () => {
-    if (analyzed || !image) return;
-    setLoading(true);
-    setAnalyzed(true);
-    const formData = new FormData();
-    formData.append('file', image);
-    try {
-      const response = await fetch('https://thurianx-backend-final-2.onrender.com/predict', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
-      const predictions = data.results;
-      if (predictions && predictions.length > 0) {
-        const label = predictions[0].label || 'Unknown';
-        const confidence = predictions[0].confidence ? `(${(predictions[0].confidence * 100).toFixed(2)}%)` : '';
-        setResult(`${label} ${confidence}`);
-        const index = label === 'raw' ? 0 : label === 'ready' ? 1 : label === 'ripe' ? 2 : 3;
-        setResultIndex(index);
-      } else {
-        setResult(labels[lang][3]);
-        setResultIndex(3);
-      }
-    } catch (error) {
-      setResult(labels[lang][3]);
-      setResultIndex(3);
+  if (analyzed || !image) return;
+  setLoading(true);
+  setAnalyzed(true);
+  const formData = new FormData();
+  formData.append('file', image);
+  try {
+    const response = await fetch('https://thurianx-backend-final-2-1.onrender.com/predict', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+    const predictions = data.results;
+    // กรองเฉพาะ raw, ready, ripe
+    const validLabels = ['raw', 'ready', 'ripe'];
+    let filtered = Array.isArray(predictions) ? predictions.filter(
+      pred => pred.label && validLabels.includes(pred.label.toLowerCase())
+    ) : [];
+    let bestPred = null;
+    if (filtered.length > 0) {
+      bestPred = filtered.reduce((prev, curr) => (curr.confidence > (prev.confidence || 0) ? curr : prev), filtered[0]);
     }
-    setLoading(false);
-  };
+    let index = null;
+    let output = '';
+    if (bestPred && bestPred.label) {
+      let label = bestPred.label.toLowerCase();
+      index = label === 'raw' ? 0 : label === 'ready' ? 1 : 2;
+      output = `${labels[lang][index]} (${((bestPred.confidence || 1) * 100).toFixed(2)}%)`;
+    } else {
+      // ถ้าไม่พบ raw/ready/ripe ให้เคลียร์ผลลัพธ์ ไม่แสดงอะไรเลย (หรือแสดงข้อความเฉพาะกิจ เช่น ไม่มีผลลัพธ์)
+      index = null;
+      output = lang === 'TH' ? 'ไม่พบผลลัพธ์ที่เกี่ยวกับทุเรียน' : lang === 'EN' ? 'No durian-related result found.' : '未检测到榴莲相关结果';
+    }
+    setResult(output);
+    setResultIndex(index);
+  } catch (error) {
+    setResult(lang === 'TH' ? 'เกิดข้อผิดพลาดในการวิเคราะห์' : lang === 'EN' ? 'Analysis error occurred.' : '分析发生错误');
+    setResultIndex(null);
+  }
+  setLoading(false);
+};
 
   if (!started) return <WelcomeScreen onStart={() => setStarted(true)} lang={lang} setLang={setLang} />;
 

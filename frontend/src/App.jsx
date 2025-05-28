@@ -1,3 +1,6 @@
+// ThurianX App: Welcome + Durian Ripeness Analyzer (Full App)
+// Note: This file can be used as App.jsx in your React project (TailwindCSS enabled)
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -5,7 +8,7 @@ function WelcomeScreen({ onStart, lang, setLang }) {
   useEffect(() => {
     const handleInteraction = () => {
       const audio = new Audio('/epic_ThurianX_app.mp3');
-      audio.volume = 0.2;
+      audio.volume = 0.5;
       audio.play().catch((err) => {
         console.warn('🎵 Cannot play audio:', err);
       });
@@ -13,10 +16,8 @@ function WelcomeScreen({ onStart, lang, setLang }) {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
     };
-
     document.addEventListener('click', handleInteraction);
     document.addEventListener('touchstart', handleInteraction);
-
     return () => {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
@@ -26,10 +27,6 @@ function WelcomeScreen({ onStart, lang, setLang }) {
       }
     };
   }, []);
-
-  const handleStart = () => {
-    onStart();
-  };
 
   const headings = {
     TH: 'ระบบตรวจสอบระดับการสุกของทุเรียน ด้วย AI ที่เรียบง่าย งดงาม และแม่นยำ',
@@ -57,17 +54,17 @@ function WelcomeScreen({ onStart, lang, setLang }) {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 text-center space-y-6 relative overflow-hidden">
-      {/* ข้อความเบาๆ ลอยๆ ชวนเปิดเสียง */}
+      {/* Music tip floating text */}
       <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  className="absolute top-4 right-4 text-sm text-gray-400 animate-pulse z-20"
->
-  {lang === 'TH' && 'สัมผัสเพื่อเปิดดนตรี 🎵'}
-  {lang === 'EN' && 'Touch the screen to enable sound 🎵'}
-  {lang === 'CN' && '点击屏幕以开启音乐 🎵'}
-</motion.div>
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute top-4 right-4 text-sm text-gray-400 animate-pulse z-20"
+      >
+        {lang === 'TH' && 'แตะที่หน้าจอเพื่อเปิดเสียงดนตรี 🎵'}
+        {lang === 'EN' && 'Touch the screen to enable sound 🎵'}
+        {lang === 'CN' && '点击屏幕以开启音乐 🎵'}
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -126,7 +123,7 @@ function WelcomeScreen({ onStart, lang, setLang }) {
       </motion.div>
 
       <motion.button
-        onClick={handleStart}
+        onClick={onStart}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 1.2, duration: 0.5 }}
@@ -181,9 +178,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [resultIndex, setResultIndex] = useState(null);
+  const [analyzed, setAnalyzed] = useState(false);
   const [started, setStarted] = useState(false);
   const [lang, setLang] = useState('TH');
-  const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
   const labels = {
@@ -202,6 +199,7 @@ function App() {
     const file = e.target.files[0];
     if (file) {
       setImage(file);
+      setAnalyzed(false);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(file);
@@ -209,16 +207,33 @@ function App() {
   };
 
   const analyzeImage = async () => {
+    if (analyzed || !image) return;
     setLoading(true);
-    setTimeout(() => {
-      const index = Math.floor(Math.random() * 4);
-      setResultIndex(index);
-      const accuracy = (Math.random() * 20 + 80).toFixed(2);
-      const label = labels[lang][index];
-      const output = index < 3 ? `${label} (${accuracy}%)` : `${label}`;
-      setResult(output);
-      setLoading(false);
-    }, 2000);
+    setAnalyzed(true);
+    const formData = new FormData();
+    formData.append('file', image);
+    try {
+      const response = await fetch('https://thurianx-backend-final-2.onrender.com/predict', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      const predictions = data.results;
+      if (predictions && predictions.length > 0) {
+        const label = predictions[0].label || 'Unknown';
+        const confidence = predictions[0].confidence ? `(${(predictions[0].confidence * 100).toFixed(2)}%)` : '';
+        setResult(`${label} ${confidence}`);
+        const index = label === 'raw' ? 0 : label === 'ready' ? 1 : label === 'ripe' ? 2 : 3;
+        setResultIndex(index);
+      } else {
+        setResult(labels[lang][3]);
+        setResultIndex(3);
+      }
+    } catch (error) {
+      setResult(labels[lang][3]);
+      setResultIndex(3);
+    }
+    setLoading(false);
   };
 
   if (!started) return <WelcomeScreen onStart={() => setStarted(true)} lang={lang} setLang={setLang} />;
@@ -252,27 +267,51 @@ function App() {
           ) : (
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-green-300 rounded-xl h-60 text-gray-400 text-center p-4">
               <p>{lang === 'TH' ? 'ยังไม่ได้เลือกรูปภาพ' : lang === 'EN' ? 'No image selected' : '尚未选择图片'}</p>
-              <p className="text-sm mt-2">{lang === 'TH' ? 'กรุณาอัปโหลดภาพทุเรียนเพื่อเริ่มวิเคราะห์' : lang === 'EN' ? 'Please upload a durian image to start analysis' : '请上传榴莲图像以开始分析'}</p>
+              <p className="text-sm mt-2">{lang === 'TH' ? 'กรุณาถ่ายรูปทุเรียนที่ต้องการเพื่อเริ่มวิเคราะห์' : lang === 'EN' ? 'Please take a photo of the durian you want to analyze' : '请拍下您想分析的榴莲照片'}</p>
             </div>
           )}
 
           <input type="file" accept="image/*" capture="environment" onChange={handleUpload} ref={cameraInputRef} className="hidden" />
 
-          <div className="flex gap-4 flex-wrap justify-center">
+          <div className="flex gap-4 flex-wrap justify-center mt-2">
             <button onClick={() => cameraInputRef.current && cameraInputRef.current.click()} className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow">
               {buttons[lang][0]}
             </button>
-
-            <button onClick={analyzeImage} disabled={!preview || loading} className="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow disabled:opacity-40">
+            <button onClick={analyzeImage} disabled={!preview || loading || analyzed} className="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-xl text-sm font-medium shadow disabled:opacity-40">
               {buttons[lang][1]}
+            </button>
+          </div>
+
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={() => {
+                setStarted(false);
+                setImage(null);
+                setPreview(null);
+                setResult(null);
+                setResultIndex(null);
+                setAnalyzed(false);
+              }}
+              className="bg-white text-black px-6 py-2 rounded-full shadow-md hover:scale-105 transition-all text-sm font-semibold tracking-wide border border-gray-300 backdrop-blur-md"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              {lang === 'TH' ? 'ย้อนกลับไปหน้าแรก' : lang === 'EN' ? 'Back to Home' : '返回首页'}
             </button>
           </div>
 
           <AnimatePresence>
             {loading && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-yellow-500 text-center">
-                ⏳ {lang === 'TH' ? 'AI กำลังวิเคราะห์ภาพ...' : lang === 'EN' ? 'AI analyzing...' : 'AI 正在分析...'}
-              </motion.p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center gap-3 py-4 text-center"
+              >
+                <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-green-700 font-semibold text-sm">
+                  ⏳ {lang === 'TH' ? 'AI กำลังวิเคราะห์ภาพ...' : lang === 'EN' ? 'AI analyzing...' : 'AI 正在分析...'}
+                </p>
+              </motion.div>
             )}
             {result && !loading && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

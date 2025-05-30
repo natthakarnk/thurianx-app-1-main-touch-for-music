@@ -212,6 +212,14 @@ function App() {
   setAnalyzed(true);
   const formData = new FormData();
   formData.append('file', image);
+
+  // ข้อความแจ้งเตือน
+  const notDurianMsg = {
+    TH: "กรุณาถ่ายรูปใหม่ ระบบพบว่าวัตถุนี้ไม่ใช่ทุเรียน",
+    EN: "Please take a new photo. The system detected that this object is not durian.",
+    CN: "请重新拍照，系统检测到该物体不是榴莲。"
+  };
+
   try {
     const response = await fetch('https://thurianx-backend-final-2-1.onrender.com/predict', {
       method: 'POST',
@@ -232,20 +240,20 @@ function App() {
     if (bestPred && bestPred.label) {
       let label = bestPred.label.toLowerCase();
       index = label === 'raw' ? 0 : label === 'ready' ? 1 : 2;
-      output = `${labels[lang][index]} (${((bestPred.confidence || 1) * 100).toFixed(2)}%)`;
+      const conf = bestPred.confidence !== undefined && bestPred.confidence !== null
+        ? (bestPred.confidence * 100).toFixed(2)
+        : '100.00';
+      output = `${labels[lang][index]} (${conf}%)`;
     } else {
-      // ไม่พบ raw/ready/ripe หรือเกิดข้อผิดพลาด → ให้ตอบว่า "สุก" + random confidence 89.27–98.64
-      index = 2;
-      const randomConf = (Math.random() * (98.64 - 89.27) + 89.27).toFixed(2);
-      output = `${labels[lang][2]} (${randomConf}%)`;
+      // ไม่พบ durian ในภาพ
+      output = notDurianMsg[lang];
+      index = null;
     }
     setResult(output);
     setResultIndex(index);
   } catch (error) {
-    // error ใด ๆ → "สุก" + random confidence 89.27–98.64
-    const randomConf = (Math.random() * (98.64 - 89.27) + 89.27).toFixed(2);
-    setResult(`${labels[lang][2]} (${randomConf}%)`);
-    setResultIndex(2);
+    setResult(notDurianMsg[lang]);
+    setResultIndex(null);
   }
   setLoading(false);
 };
